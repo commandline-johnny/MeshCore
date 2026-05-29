@@ -413,6 +413,13 @@ bool MyMesh::isLooped(const mesh::Packet* packet, const uint8_t max_counters[]) 
   return n >= max_counters[hash_size];
 }
 
+static bool shouldConvertFloodToDefaultScope(const NodePrefs& prefs, const TransportKey& default_scope, const mesh::Packet* pkt) {
+  if (pkt->getRouteType() != ROUTE_TYPE_FLOOD || default_scope.isNull()) return false;
+  if (prefs.flood_convert_mode == 2) return true;
+  if (prefs.flood_convert_mode == 1) return pkt->getPathHashCount() == 0;
+  return false;
+}
+
 void MyMesh::sendFloodReply(mesh::Packet* packet, unsigned long delay_millis, uint8_t path_hash_size) {
   if (recv_pkt_region && !recv_pkt_region->isWildcard()) {  // if _request_ packet scope is known, send reply with same scope
     TransportKey scope;
@@ -546,6 +553,12 @@ uint32_t MyMesh::getDirectRetransmitDelay(const mesh::Packet *packet) {
 }
 
 bool MyMesh::filterRecvFloodPacket(mesh::Packet* pkt) {
+  if (shouldConvertFloodToDefaultScope(_prefs, default_scope, pkt)) {
+    pkt->header = (pkt->header & ~PH_ROUTE_MASK) | ROUTE_TYPE_TRANSPORT_FLOOD;
+    pkt->transport_codes[0] = default_scope.calcTransportCode(pkt);
+    pkt->transport_codes[1] = 0;
+  }
+
   // just try to determine region for packet (apply later in allowPacketForward())
   if (pkt->getRouteType() == ROUTE_TYPE_TRANSPORT_FLOOD) {
     recv_pkt_region = region_map.findMatch(pkt, REGION_DENY_FLOOD);
@@ -887,6 +900,7 @@ MyMesh::MyMesh(mesh::MainBoard &board, mesh::Radio &radio, mesh::MillisecondCloc
   _prefs.flood_advert_interval = 47; // 47 hours
   _prefs.flood_max = 64;
   _prefs.interference_threshold = 0; // disabled
+  _prefs.flood_convert_mode = 0;
 
   // bridge defaults
   _prefs.bridge_enabled = 1;    // enabled
@@ -1251,6 +1265,17 @@ void MyMesh::handleCommand(uint32_t sender_timestamp, char *command, char *reply
       sendNodeDiscoverReq();
       strcpy(reply, "OK - Discover sent");
     }
+  } else if (memcmp(command, "set flood.convert.mode ", 23) == 0) {
+    uint8_t mode = atoi(&command[23]);
+    if (mode <= 2) {
+      _prefs.flood_convert_mode = mode;
+      savePrefs();
+      strcpy(reply, "OK");
+    } else {
+      strcpy(reply, "Error, must be 0,1, or 2");
+    }
+  } else if (memcmp(command, "get flood.convert.mode", 22) == 0 && (command[22] == 0 || command[22] == ' ')) {
+    sprintf(reply, "> %d", (uint32_t)_prefs.flood_convert_mode);
   } else{
     _cli.handleCommand(sender_timestamp, command, reply);  // common CLI commands
   }

@@ -633,6 +633,25 @@ This document provides an overview of CLI commands that can be sent to MeshCore 
 
 ---
 
+#### Control unscoped flood-to-transport conversion (RegionMap repeater firmware)
+**Usage:**
+- `get flood.convert.mode`
+- `set flood.convert.mode <value>`
+
+**Parameters:**
+- `value`:
+  - `0`: disabled (do not convert unscoped flood packets)
+  - `1`: convert only zero-hop unscoped flood packets (no path hashes)
+  - `2`: convert all unscoped flood packets
+
+**Default:** `0`
+
+**Note:** Applies to RegionMap-based repeater apps (`simple_repeater` and `simple_room_server`). When conversion is active and a default region is configured, incoming `ROUTE_TYPE_FLOOD` packets are rewritten to `ROUTE_TYPE_TRANSPORT_FLOOD` and the default region transport code is applied before normal region matching/forwarding checks.
+
+**Fallback behavior:** If no default region is configured, packets remain unscoped and existing behavior is unchanged.
+
+---
+
 ### ACL
 
 #### Add, update or remove permissions for a companion
