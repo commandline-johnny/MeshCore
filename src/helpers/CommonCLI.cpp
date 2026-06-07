@@ -639,6 +639,8 @@ void CommonCLI::syncMQTTPrefsToNodePrefs() {
   _prefs->mqtt_tx_enabled = _mqtt_prefs.mqtt_tx_enabled;
   _prefs->mqtt_rx_enabled = _mqtt_prefs.mqtt_rx_enabled;
   _prefs->mqtt_status_interval = _mqtt_prefs.mqtt_status_interval;
+  _prefs->mqtt_neighbors_enabled = _mqtt_prefs.mqtt_neighbors_enabled;
+  _prefs->mqtt_neighbors_interval = _mqtt_prefs.mqtt_neighbors_interval;
   StrHelper::strncpy(_prefs->wifi_ssid, _mqtt_prefs.wifi_ssid, sizeof(_prefs->wifi_ssid));
   StrHelper::strncpy(_prefs->wifi_password, _mqtt_prefs.wifi_password, sizeof(_prefs->wifi_password));
   _prefs->wifi_power_save = _mqtt_prefs.wifi_power_save;
@@ -670,6 +672,8 @@ void CommonCLI::syncNodePrefsToMQTTPrefs() {
   _mqtt_prefs.mqtt_tx_enabled = _prefs->mqtt_tx_enabled;
   _mqtt_prefs.mqtt_rx_enabled = _prefs->mqtt_rx_enabled;
   _mqtt_prefs.mqtt_status_interval = _prefs->mqtt_status_interval;
+  _mqtt_prefs.mqtt_neighbors_enabled = _prefs->mqtt_neighbors_enabled;
+  _mqtt_prefs.mqtt_neighbors_interval = _prefs->mqtt_neighbors_interval;
   StrHelper::strncpy(_mqtt_prefs.wifi_ssid, _prefs->wifi_ssid, sizeof(_mqtt_prefs.wifi_ssid));
   StrHelper::strncpy(_mqtt_prefs.wifi_password, _prefs->wifi_password, sizeof(_mqtt_prefs.wifi_password));
   _mqtt_prefs.wifi_power_save = _prefs->wifi_power_save;
@@ -1408,6 +1412,26 @@ void CommonCLI::handleSetCmd(uint32_t sender_timestamp, char* command, char* rep
     } else {
       strcpy(reply, "Error: interval must be between 1-60 minutes");
     }
+#if defined(BOARD_HAS_PSRAM) && defined(MAX_NEIGHBOURS) && MAX_NEIGHBOURS > 0
+  } else if (memcmp(config, "mqtt.neighbors ", 14) == 0) {
+    _prefs->mqtt_neighbors_enabled = memcmp(&config[14], "on", 2) == 0;
+    savePrefs();
+    strcpy(reply, "OK");
+  } else if (memcmp(config, "mqtt.neighbors.interval ", 24) == 0) {
+    uint32_t hours = _atoi(&config[24]);
+    if (hours >= 12 && hours <= 8760) {
+      _prefs->mqtt_neighbors_interval = hours * 3600000UL;
+      savePrefs();
+      sprintf(reply, "OK - neighbors interval set to %u hours (%lu ms)", hours,
+              (unsigned long)_prefs->mqtt_neighbors_interval);
+    } else {
+      strcpy(reply, "Error: neighbors interval must be between 12-8760 hours");
+    }
+#elif defined(WITH_MQTT_BRIDGE)
+  } else if (memcmp(config, "mqtt.neighbors ", 14) == 0 ||
+             memcmp(config, "mqtt.neighbors.interval ", 24) == 0) {
+    strcpy(reply, "Err - not supported (requires PSRAM)");
+#endif
   } else if (memcmp(config, "wifi.ssid ", 10) == 0) {
     StrHelper::strncpy(_prefs->wifi_ssid, &config[10], sizeof(_prefs->wifi_ssid));
     savePrefs();
@@ -1962,6 +1986,17 @@ void CommonCLI::handleGetCmd(uint32_t sender_timestamp, char* command, char* rep
   } else if (memcmp(config, "mqtt.interval", 13) == 0) {
     uint32_t minutes = (_prefs->mqtt_status_interval + 29999) / 60000;
     sprintf(reply, "> %u minutes (%lu ms)", minutes, (unsigned long)_prefs->mqtt_status_interval);
+#if defined(BOARD_HAS_PSRAM) && defined(MAX_NEIGHBOURS) && MAX_NEIGHBOURS > 0
+  } else if (memcmp(config, "mqtt.neighbors.interval", 23) == 0) {
+    uint32_t hours = (_prefs->mqtt_neighbors_interval + 3599999) / 3600000;
+    sprintf(reply, "> %u hours (%lu ms)", hours, (unsigned long)_prefs->mqtt_neighbors_interval);
+  } else if (memcmp(config, "mqtt.neighbors", 14) == 0) {
+    sprintf(reply, "> %s", _prefs->mqtt_neighbors_enabled ? "on" : "off");
+#elif defined(WITH_MQTT_BRIDGE)
+  } else if (memcmp(config, "mqtt.neighbors", 14) == 0 ||
+             memcmp(config, "mqtt.neighbors.interval", 23) == 0) {
+    strcpy(reply, "Err - not supported (requires PSRAM)");
+#endif
   } else if (config[0] == 'm' && config[1] == 'q' && config[2] == 't' && config[3] == 't' &&
              config[4] >= '1' && config[4] <= ('0' + MAX_MQTT_SLOTS) && config[5] == '.') {
     // Slot-based commands: get mqtt1.preset, get mqtt1.server, etc.

@@ -72,6 +72,8 @@ struct NodePrefs { // persisted to file
   uint8_t mqtt_tx_enabled;       // TX packet uplinking: 0=off, 1=all, 2=advert (self-originated only)
   uint32_t mqtt_status_interval; // Status publish interval (ms)
   uint8_t mqtt_rx_enabled;       // Enable RX packet uplinking (default: on)
+  uint8_t mqtt_neighbors_enabled;    // Periodic neighbors/scopes MQTT publish (PSRAM boards only)
+  uint32_t mqtt_neighbors_interval;  // Neighbors publish interval (ms), default 24h, min 12h
 
   // WiFi settings
   char wifi_ssid[32];       // WiFi SSID
@@ -202,6 +204,8 @@ struct MQTTPrefs {
 
   // --- Appended fields (added after initial 6-slot migration) ---
   uint8_t mqtt_rx_enabled;       // Enable RX packet uplinking (default: on)
+  uint8_t mqtt_neighbors_enabled;    // Periodic neighbors/scopes MQTT publish (PSRAM boards only)
+  uint32_t mqtt_neighbors_interval;  // Neighbors publish interval (ms), default 24h, min 12h
 };
 
 // 3-slot MQTTPrefs layout — used for migrating from 3-slot to 6-slot format.
