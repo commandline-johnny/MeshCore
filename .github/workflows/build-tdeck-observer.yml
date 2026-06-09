@@ -1,0 +1,50 @@
+name: Build TDeck MQTT Observer
+
+on:
+  push:
+    branches: [mqtt-bridge-implementation-flex]
+    paths:
+      - 'variants/lilygo_tdeck/**'
+      - 'src/**'
+      - 'examples/simple_repeater/**'
+      - 'platformio.ini'
+      - '.github/workflows/build-tdeck-observer.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: ~/.platformio
+          key: pio-${{ hashFiles('**/platformio.ini') }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install PlatformIO
+        run: pip install platformio
+
+      - name: Set firmware version
+        run: echo "FIRMWARE_VERSION=dev-$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+
+      - name: Build TDeck observer firmware
+        run: |
+          export PLATFORMIO_BUILD_FLAGS="-DFIRMWARE_VERSION='\"$FIRMWARE_VERSION\"'"
+          pio run -e LilyGo_TDeck_repeater_observer_mqtt
+
+      - name: Upload firmware artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tdeck-observer-${{ env.FIRMWARE_VERSION }}
+          path: |
+            .pio/build/LilyGo_TDeck_repeater_observer_mqtt/firmware.bin
+            .pio/build/LilyGo_TDeck_repeater_observer_mqtt/firmware-merged.bin
+          if-no-files-found: warn
