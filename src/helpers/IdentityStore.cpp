@@ -3,7 +3,7 @@
 bool IdentityStore::load(const char *name, mesh::LocalIdentity& id) {
   bool loaded = false;
   char filename[40];
-  sprintf(filename, "%s/%s.id", _dir, name);
+  snprintf(filename, sizeof(filename), "%s/%s.id", _dir, name);
   if (_fs->exists(filename)) {
 #if defined(RP2040_PLATFORM)
     File file = _fs->open(filename, "r");
@@ -21,7 +21,7 @@ bool IdentityStore::load(const char *name, mesh::LocalIdentity& id) {
 bool IdentityStore::load(const char *name, mesh::LocalIdentity& id, char display_name[], int max_name_sz) {
   bool loaded = false;
   char filename[40];
-  sprintf(filename, "%s/%s.id", _dir, name);
+  snprintf(filename, sizeof(filename), "%s/%s.id", _dir, name);
   if (_fs->exists(filename)) {
 #if defined(RP2040_PLATFORM)
     File file = _fs->open(filename, "r");
@@ -33,7 +33,8 @@ bool IdentityStore::load(const char *name, mesh::LocalIdentity& id, char display
 
       int n = max_name_sz;   // up to 32 bytes
       if (n > 32) n = 32;
-      file.read((uint8_t *) display_name, n);
+      int actually_read = file.read((uint8_t *) display_name, n);
+      if (actually_read < n) memset(display_name + actually_read, 0, n - actually_read);
       display_name[n - 1] = 0;  // ensure null terminator
 
       file.close();
@@ -44,7 +45,7 @@ bool IdentityStore::load(const char *name, mesh::LocalIdentity& id, char display
 
 bool IdentityStore::save(const char *name, const mesh::LocalIdentity& id) {
   char filename[40];
-  sprintf(filename, "%s/%s.id", _dir, name);
+  snprintf(filename, sizeof(filename), "%s/%s.id", _dir, name);
 
 #if defined(NRF52_PLATFORM) || defined(STM32_PLATFORM)
   _fs->remove(filename);
@@ -66,7 +67,7 @@ bool IdentityStore::save(const char *name, const mesh::LocalIdentity& id) {
 
 bool IdentityStore::save(const char *name, const mesh::LocalIdentity& id, const char display_name[]) {
   char filename[40];
-  sprintf(filename, "%s/%s.id", _dir, name);
+  snprintf(filename, sizeof(filename), "%s/%s.id", _dir, name);
 
 #if defined(NRF52_PLATFORM) || defined(STM32_PLATFORM)
   _fs->remove(filename);
