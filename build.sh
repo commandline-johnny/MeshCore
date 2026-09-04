@@ -213,50 +213,31 @@ build_all_firmwares_by_suffix() {
   done
 }
 
+# ponytail: this fork only ships T-Deck + Meshnology W12 hardware, so CI has
+# no business compiling the other ~80 upstream board variants. Filter by
+# suffix, then keep only envs for our two boards. Widen BOARD_ALLOWLIST_REGEX
+# if we ever add another supported board.
+BOARD_ALLOWLIST_REGEX='^(LilyGo_TDeck|meshnology_w12)'
+
+build_supported_firmwares_by_suffix() {
+  envs=($(get_pio_envs_ending_with_string "$1" | grep -E "$BOARD_ALLOWLIST_REGEX"))
+  for env in "${envs[@]}"; do
+    build_firmware $env
+  done
+}
+
 build_repeater_firmwares() {
-
-#  # build specific repeater firmwares
-#  build_firmware "Heltec_v2_repeater"
-#  build_firmware "Heltec_v3_repeater"
-#  build_firmware "Xiao_C3_Repeater_sx1262"
-#  build_firmware "Xiao_S3_WIO_Repeater"
-#  build_firmware "LilyGo_T3S3_sx1262_Repeater"
-#  build_firmware "RAK_4631_Repeater"
-
-  # build all repeater firmwares
-  build_all_firmwares_by_suffix "_repeater"
-
+  build_supported_firmwares_by_suffix "_repeater"
 }
 
 build_companion_firmwares() {
-
-#  # build specific companion firmwares
-#  build_firmware "Heltec_v2_companion_radio_usb"
-#  build_firmware "Heltec_v2_companion_radio_ble"
-#  build_firmware "Heltec_v3_companion_radio_usb"
-#  build_firmware "Heltec_v3_companion_radio_ble"
-#  build_firmware "Xiao_S3_WIO_companion_radio_ble"
-#  build_firmware "LilyGo_T3S3_sx1262_companion_radio_usb"
-#  build_firmware "LilyGo_T3S3_sx1262_companion_radio_ble"
-#  build_firmware "RAK_4631_companion_radio_usb"
-#  build_firmware "RAK_4631_companion_radio_ble"
-#  build_firmware "t1000e_companion_radio_ble"
-
-  # build all companion firmwares
-  build_all_firmwares_by_suffix "_companion_radio_usb"
-  build_all_firmwares_by_suffix "_companion_radio_ble"
-
+  build_supported_firmwares_by_suffix "_companion_radio_usb"
+  build_supported_firmwares_by_suffix "_companion_radio_ble"
+  build_supported_firmwares_by_suffix "_companion_radio_wifi"
 }
 
 build_room_server_firmwares() {
-
-#  # build specific room server firmwares
-#  build_firmware "Heltec_v3_room_server"
-#  build_firmware "RAK_4631_room_server"
-
-  # build all room server firmwares
-  build_all_firmwares_by_suffix "_room_server"
-
+  build_supported_firmwares_by_suffix "_room_server"
 }
 
 build_firmwares() {
